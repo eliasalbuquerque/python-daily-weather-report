@@ -3,7 +3,7 @@ title: 'python-daily-weather-report'
 author: 'Elias Albuquerque'
 version: 'Python 3.12.0'
 created: '2024-07-09'
-update: '2024-07-11'
+update: '2024-07-12'
 """
 
 from time import sleep
@@ -12,6 +12,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import datetime
+from selenium.webdriver.common.keys import Keys
+
+
+driver = webdriver.Chrome()
 
 
 def collect_weather_forecast(url):
@@ -32,7 +36,7 @@ def collect_weather_forecast(url):
         minimum, day, and day of the week.
         In case of error, returns None.
     """
-    
+
     # Create dictionary to collect data
     weather_data = {}
     days = ['today', 'tomorrow', 'day_after', 'next_day']
@@ -42,6 +46,7 @@ def collect_weather_forecast(url):
             weather_data[day] = {
                 'day': None,
                 'weekday': None,
+                'mounth': None,
                 'temperature': None,
                 'condition': None
             }
@@ -58,23 +63,9 @@ def collect_weather_forecast(url):
     date = datetime.datetime.now()
     current_day = date.strftime('%d')
     current_weekday = date.strftime('%A')
-
-    def translate_weekdays(weekday):
-        weekdays_ptbr = {
-            'Monday': 'Segunda-feira',
-            'Tuesday': 'Terça-feira',
-            'Wednesday': 'Quarta-feira',
-            'Thursday': 'Quinta-feira',
-            'Friday': 'Sexta-feira',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo',
-        }
-
-        weekday_ptbr = weekdays_ptbr[weekday]
-        return weekday_ptbr
+    current_mounth = date.strftime('%B')
 
     # Accessing the site
-    driver = webdriver.Chrome()
     driver.get(url)
     sleep(2)
 
@@ -105,22 +96,131 @@ def collect_weather_forecast(url):
         future_weather_condition = driver.find_elements(
             By.XPATH, xp_future_weather_conditions)
 
-        # Adding values to the dictionary: *Weekdays pt-br and Temperature in °C
+        # Adding values to the dictionary: *Weekdays and Temperature in °C
         weather_data['today']['day'] = current_day
-        weather_data['today']['weekday'] = translate_weekdays(current_weekday)
+        weather_data['today']['weekday'] = current_weekday
+        weather_data['today']['mounth'] = current_mounth
         weather_data['today']['temperature'] = current_temperature
         weather_data['today']['condition'] = current_weather
 
         for i, day in enumerate(days[1:]):
             weather_data[day]['day'] = str(int(current_day) + i + 1)
-            weather_data[day]['weekday'] = translate_weekdays((
+            weather_data[day]['weekday'] = (
                 datetime.date.today() + datetime.timedelta(days=i+1)
-            ).strftime('%A'))
+            ).strftime('%A')
             weather_data[day]['maximum'] = future_max_temperature[i].text + 'C'
             weather_data[day]['minimum'] = future_min_temperature[i].text + 'C'
-            weather_data[day]['condition'] = future_weather_condition[i + 1].get_attribute("title")
+            weather_data[day]['condition'] = future_weather_condition[
+                i + 1
+            ].get_attribute("title")
 
         return weather_data
+
+    except Exception as e:
+        print(f'Data collection error: {e}')
+
+    # finally:
+    #     driver.quit()
+
+
+def generate_forecast(data):
+    """
+    Generates a formatted weather forecast from the given data.
+
+    Args:
+        data: A dictionary containing information for different days.
+
+    Returns:
+        A formatted string with the weather forecast.
+    """
+
+    message = f"""
+    Previsão do tempo
+
+    Hoje, dia {data['today']['day']} de {data['today']['mounth']}, {data['today']['weekday']}:
+    {data['today']['temperature']}, {data['today']['condition']}
+
+    Previsão para os próximos dias:
+    Dia\t\t Dia da Semana\t Máx.\t\t Mín.\t\t Condição
+    {data['tomorrow']['day']}\t\t {data['tomorrow']['weekday']}\t\t {data['tomorrow']['maximum']}\t\t {data['tomorrow']['minimum']}\t\t {data['tomorrow']['condition']}
+    {data['day_after']['day']}\t\t {data['day_after']['weekday']}\t\t {data['day_after']['maximum']}\t\t {data['day_after']['minimum']}\t\t {data['day_after']['condition']}
+    {data['next_day']['day']}\t\t {data['next_day']['weekday']}\t\t {data['next_day']['maximum']}\t\t {data['next_day']['minimum']}\t\t {data['next_day']['condition']}
+    """
+
+    return message
+
+
+def send_email(recipient, subject, body):
+    """
+    Sends an email using the configured Gmail account.
+    This function uses Selenium to automate accessing Gmail, logging in,
+    composing an email, and sending it.
+
+    Args:
+        recipient (str): Recipient's email address.
+        subject (str): Email subject.
+        body (str): Email body.
+
+    Returns:
+        None.
+    """
+
+    # Input user
+    sender = "@gmail.com"
+    password = ""
+
+    # Navigate to the Gmail login page
+    driver.get('https://accounts.google.com/')
+
+    try:
+        wait = WebDriverWait(driver, 15)
+
+        # Fill in the login credentials
+        xp_email_input = '//input[@type="email"]'
+        email_input = wait.until(
+            EC.visibility_of_element_located((
+                By.XPATH, xp_email_input)))
+
+        email_input.send_keys(sender)
+        email_input.send_keys(Keys.ENTER)
+        sleep(2)
+
+        xp_password_input = '//input[@type="password"]'
+        password_input = wait.until(
+            EC.visibility_of_element_located((
+                By.XPATH, xp_password_input)))
+
+        password_input.send_keys(password)
+        password_input.send_keys(Keys.ENTER)
+        sleep(2)
+
+        # Navigate to the email composition page
+        driver.get("https://mail.google.com/mail/u/0/#inbox?compose=new")
+        sleep(2)
+
+        wait = WebDriverWait(driver, 15)
+
+        # Fill in the email fields
+        xp_recipient_input = '//input[@aria-label="To recipients"]'
+        recipient_input = wait.until(
+            EC.visibility_of_element_located((
+                By.XPATH, xp_recipient_input)))
+        recipient_input.send_keys(recipient)
+        sleep(1)
+
+        xp_subject_input = '//input[@name="subjectbox"]'
+        subject_input = driver.find_element(By.XPATH, xp_subject_input)
+        subject_input.send_keys(subject)
+        sleep(1)
+
+        xp_body_input = '//div[@aria-label="Message Body"]'
+        body_input = driver.find_element(By.XPATH, xp_body_input)
+        body_input.send_keys(body)
+        sleep(2)
+
+        # Send the email
+        body_input.send_keys(Keys.CONTROL, Keys.ENTER)
+        sleep(2)
 
     except Exception as e:
         print(f'Data collection error: {e}')
@@ -128,29 +228,15 @@ def collect_weather_forecast(url):
     finally:
         driver.quit()
 
-# 3. Tratamento e Formatação de Dados:
-# - Organizar os dados extraídos em um formato legível.
 
-# MENSAGEM:
-"""
-Previsão do tempo:
-Hoje, <dia>/<semana>:
-- <X°C>
-- <condicao>
+if __name__ == '__main__':
+    url = 'https://www.msn.com/pt-br/clima/forecast/'
+    weather_forecast = collect_weather_forecast(url)
+    message = generate_forecast(weather_forecast)
 
-Previsão para os próximos dias:
-<dia+1>/<sem+1>    <dia+2>/<sem+2>    <dia+2>/<sem+2>
-máx. <Y°C>         máx. <Y°C>         máx. <Y°C>
-mín. <Z°C>         mín. <Z°C>         mín. <Z°C>
-<condicao>         <condicao>         <condicao>
-"""
-
-# ENVIAR EMAIL(destinatario, assunto, corpo)
-# 4. Envio de E-mail:
-# - Configurar o envio de e-mails.
-# - Criar o conteúdo do e-mail com os dados meteorológicos coletados.
-# - Enviar o e-mail para um destinatário específico.(pode enviar para você
-#   mesmo como teste)
+    recipient = '@gmail.com'
+    subject = ''
+    send_email(recipient, subject, message)
 
 # VERIFICAR SE JA TEM AGENDAMENTO DO SCRIPT, SE NÃO, USAR O SISTEMA OP. PARA
 # AGENDAR, SEJA WINDOWS OU LINUX, OU USANDO BIBLIOTECA PYTHON (QUE EU ACHO
@@ -158,15 +244,3 @@ mín. <Z°C>         mín. <Z°C>         mín. <Z°C>
 # 5. Automatização do Envio Diário:
 # - Agendar a execução do script para rodar diariamente em um horário
 #   específico.
-
-if __name__ == '__main__':
-    # url = 'https://facebook.com' # teste
-
-    # url = 'https://www.msn.com/en-us/weather/forecast/in-Socorro%2C-S%C3%A3o-Paulo,SP?loc=eyJsIjoiU29jb3JybywgU8OjbyBQYXVsbyIsInIiOiJTUCIsImMiOiJCcmF6aWwiLCJpIjoiQlIiLCJnIjoiZW4tdXMiLCJ4IjoiLTQ2LjcwOTMwMDk5NDg3MzA1IiwieSI6Ii0yMy42ODQwMDAwMTUyNTg3OSJ9&weadegreetype=C&ocid=winp2fphotkey&cvid=f09231fded124191bc88bb4d161db80e'
-
-    # url = 'https://www.msn.com/en-us/weather/forecast/'
-    
-    url = 'https://www.msn.com/pt-br/clima/forecast/'
-
-    weather_forecast = collect_weather_forecast(url)
-    print(weather_forecast)

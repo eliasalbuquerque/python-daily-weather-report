@@ -1,4 +1,4 @@
-# Python Daily Weather Report
+# Relatório meteorológico diário em Python
 
 Este repositório contém um web scraper em Python que coleta informações 
 meteorológicas de um site de previsão do tempo e envia um e-mail diário com a 
@@ -13,13 +13,14 @@ previsão para o seu endereço de e-mail.
    - [x] Salvar dados no dicionário;
    - [x] Documentar o trecho do código.
 2. Tratamento e Formatação de Dados:
-   - [ ] Criar a mensagem para o envio do e-mail;
-   - [ ] Adicionar os dados do dicionário no corpo da mensagem;
-   - [ ] Documentar o trecho do código.
+   - [x] Criar a mensagem para o envio do e-mail;
+   - [x] Adicionar os dados do dicionário no corpo da mensagem;
+   - [x] Documentar o trecho do código.
+   - [ ] **Revisar:** Organizar a string
 3. Envio de E-mail:
-   - [ ] Pesquisar bibliotecas de envio de e-mail com Python;
-   - [ ] Enviar e-mail com a mensagem como corpo do e-mail;
-   - [ ] Documentar o trecho do código.
+   - [x] Pesquisar bibliotecas de envio de e-mail com Python;
+   - [x] Enviar e-mail com a mensagem como corpo do e-mail;
+   - [x] Documentar o trecho do código.
 4. Automatização do Envio Diário
    - [ ] Automatizar utilizando biblioteca Python;
    - [ ] Automatizar utilizando configurações do sistema operacional;
