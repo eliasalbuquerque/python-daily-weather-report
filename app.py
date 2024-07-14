@@ -3,10 +3,10 @@ title: 'python-daily-weather-report'
 author: 'Elias Albuquerque'
 version: 'Python 3.12.0'
 created: '2024-07-09'
-update: '2024-07-13'
+update: '2024-07-14'
 """
 
-# Mude o diretório de trabalho para o diretório do script
+# Ensure that the script is executed in this directory by Windows Task Schedule
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -231,11 +231,13 @@ def schedule_script(start_time=None, test_mode=False):
         """
         Creates a .bat file to execute the 'app.py' script.
 
-        This function locates the Python executable, the current directory, and the 'app.py' script.
+        This function locates the Python executable, the current directory, and 
+        the 'app.py' script.
 
         It then generates a .bat file named 'app.bat'.
 
-        This allows the 'app.py' script to be executed by double-clicking the 'app.bat' file.
+        This allows the 'app.py' script to be executed by double-clicking the 
+        'app.bat' file.
         """
         print('Criando arquivo .bat...')
 
@@ -263,13 +265,16 @@ def schedule_script(start_time=None, test_mode=False):
 
     def check_task_schedule_windows(test_mode=False):
         """
-        Checks if a scheduled task exists on Windows and creates a new task if not.
+        Checks if a scheduled task exists on Windows and creates a new task if 
+        not.
 
         Args:
-            test_mode (bool, optional): If True, schedules the task to run every 5 minutes for testing purposes. Defaults to False.
+            test_mode (bool, optional): If True, schedules the task to run 
+            every 5 minutes for testing purposes. Defaults to False.
 
         Returns:
-            str: The start time of the scheduled task, or None if there was an error creating the task.
+            str: The start time of the scheduled task, or None if there was an 
+            error creating the task.
         """
 
         task_name = "ExecuteWeatherAppTask"
@@ -280,7 +285,8 @@ def schedule_script(start_time=None, test_mode=False):
             Schedules the task to run every 5 minutes.
 
             Returns:
-                str: The start time of the task, or None if there was an error creating the task.
+                str: The start time of the task, or None if there was an error 
+                creating the task.
             """
             try:
                 # Sets the start time of the task for 5 minutes from now
@@ -304,10 +310,12 @@ def schedule_script(start_time=None, test_mode=False):
             Schedules the task to run daily at the specified start time.
 
             Args:
-                start_time (str, optional): The start time of the task, in HH:MM format. Defaults to "08:00".
+                start_time (str, optional): The start time of the task, in 
+                HH:MM format. Defaults to "08:00".
 
             Returns:
-                str: The start time of the task, or None if there was an error creating the task.
+                str: The start time of the task, or None if there was an error 
+                creating the task.
             """
             if start_time is None:
                 start_time = "08:00"  # Default time at 8:00 AM
