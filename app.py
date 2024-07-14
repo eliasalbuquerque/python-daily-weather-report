@@ -3,19 +3,24 @@ title: 'python-daily-weather-report'
 author: 'Elias Albuquerque'
 version: 'Python 3.12.0'
 created: '2024-07-09'
-update: '2024-07-12'
+update: '2024-07-13'
 """
+
+# Mude o diretório de trabalho para o diretório do script
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import datetime
 from selenium.webdriver.common.keys import Keys
-
-
-driver = webdriver.Chrome()
+import datetime
+import getpass
+import sys
+import subprocess
+from decouple import config
 
 
 def collect_weather_forecast(url):
@@ -119,9 +124,6 @@ def collect_weather_forecast(url):
     except Exception as e:
         print(f'Data collection error: {e}')
 
-    # finally:
-    #     driver.quit()
-
 
 def generate_forecast(data):
     """
@@ -141,16 +143,16 @@ def generate_forecast(data):
     {data['today']['temperature']}, {data['today']['condition']}
 
     Previsão para os próximos dias:
-    Dia\t\t Dia da Semana\t Máx.\t\t Mín.\t\t Condição
-    {data['tomorrow']['day']}\t\t {data['tomorrow']['weekday']}\t\t {data['tomorrow']['maximum']}\t\t {data['tomorrow']['minimum']}\t\t {data['tomorrow']['condition']}
-    {data['day_after']['day']}\t\t {data['day_after']['weekday']}\t\t {data['day_after']['maximum']}\t\t {data['day_after']['minimum']}\t\t {data['day_after']['condition']}
-    {data['next_day']['day']}\t\t {data['next_day']['weekday']}\t\t {data['next_day']['maximum']}\t\t {data['next_day']['minimum']}\t\t {data['next_day']['condition']}
+
+    Dia {data['tomorrow']['day']}, {data['tomorrow']['weekday']}, máx: {data['tomorrow']['maximum']}, mín {data['tomorrow']['minimum']}, {data['tomorrow']['condition']}
+    Dia {data['day_after']['day']}, {data['day_after']['weekday']}, máx: {data['day_after']['maximum']}, mín {data['day_after']['minimum']}, {data['day_after']['condition']}
+    Dia {data['next_day']['day']}, {data['next_day']['weekday']}, máx: {data['next_day']['maximum']}, mín {data['next_day']['minimum']}, {data['next_day']['condition']}
     """
 
     return message
 
 
-def send_email(recipient, subject, body):
+def send_email(sender, password, recipient, subject, body):
     """
     Sends an email using the configured Gmail account.
     This function uses Selenium to automate accessing Gmail, logging in,
@@ -165,14 +167,9 @@ def send_email(recipient, subject, body):
         None.
     """
 
-    # Input user
-    sender = "@gmail.com"
-    password = ""
-
-    # Navigate to the Gmail login page
-    driver.get('https://accounts.google.com/')
-
     try:
+        # Navigate to the Gmail login page
+        driver.get('https://accounts.google.com/')
         wait = WebDriverWait(driver, 15)
 
         # Fill in the login credentials
@@ -196,9 +193,8 @@ def send_email(recipient, subject, body):
 
         # Navigate to the email composition page
         driver.get("https://mail.google.com/mail/u/0/#inbox?compose=new")
-        sleep(2)
-
         wait = WebDriverWait(driver, 15)
+        # sleep(2)
 
         # Fill in the email fields
         xp_recipient_input = '//input[@aria-label="To recipients"]'
@@ -229,18 +225,183 @@ def send_email(recipient, subject, body):
         driver.quit()
 
 
+def schedule_script(start_time=None, test_mode=False):
+
+    def create_bat_file():
+        """
+        Creates a .bat file to execute the 'app.py' script.
+
+        This function locates the Python executable, the current directory, and the 'app.py' script.
+
+        It then generates a .bat file named 'app.bat'.
+
+        This allows the 'app.py' script to be executed by double-clicking the 'app.bat' file.
+        """
+        print('Criando arquivo .bat...')
+
+        # Locates the Python executable, current directory and the Python script
+        python_exe = sys.executable
+        script_path = os.path.abspath('app.py')
+
+        # Content of the .bat file
+        bat_content = f'@echo off"{python_exe}" "{script_path}"\n'
+        
+        # Disable command echoing
+        # Change directory to the script's directory
+        # Execute Python script
+        bat_content = (
+            '@echo off\n'
+            f'cd /d "{os.path.dirname(script_path)}"\n'  
+            f'"{python_exe}" "{script_path}"\n'  
+        )
+
+        # Creates and writes to the .bat file
+        with open('app.bat', 'w') as bat_file:
+            bat_file.write(bat_content)
+
+        print('Arquivo "app.bat" criado com sucesso.')
+
+    def check_task_schedule_windows(test_mode=False):
+        """
+        Checks if a scheduled task exists on Windows and creates a new task if not.
+
+        Args:
+            test_mode (bool, optional): If True, schedules the task to run every 5 minutes for testing purposes. Defaults to False.
+
+        Returns:
+            str: The start time of the scheduled task, or None if there was an error creating the task.
+        """
+
+        task_name = "ExecuteWeatherAppTask"
+        query_command = f"schtasks /Query /TN {task_name}"
+
+        def set_task_every_five_minutes():
+            """
+            Schedules the task to run every 5 minutes.
+
+            Returns:
+                str: The start time of the task, or None if there was an error creating the task.
+            """
+            try:
+                # Sets the start time of the task for 5 minutes from now
+                start_time = (
+                    datetime.datetime.now() + datetime.timedelta(minutes=5)).strftime("%H:%M")
+                create_command = (
+                    f'schtasks /Create /SC MINUTE /MO 5 /TN {
+                        task_name} /TR "{os.path.abspath("app.bat")}" '
+                    f'/ST {start_time} /F'
+                )
+                subprocess.run(create_command, check=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                return start_time
+
+            except subprocess.CalledProcessError as e:
+                print(f"Erro ao criar a tarefa: {e.stderr.decode()}")
+                return None
+
+        def set_task_daily(start_time):
+            """
+            Schedules the task to run daily at the specified start time.
+
+            Args:
+                start_time (str, optional): The start time of the task, in HH:MM format. Defaults to "08:00".
+
+            Returns:
+                str: The start time of the task, or None if there was an error creating the task.
+            """
+            if start_time is None:
+                start_time = "08:00"  # Default time at 8:00 AM
+
+            try:
+                # Sets the start time of the task to run daily
+                create_command = (
+                    f'schtasks /Create /SC DAILY /TN {
+                        task_name} /TR "{os.path.abspath("app.bat")}" '
+                    f'/ST {start_time} /F'
+                )
+                subprocess.run(create_command, check=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                return start_time
+
+            except subprocess.CalledProcessError as e:
+                print(f"Erro ao criar a tarefa: {e.stderr.decode()}")
+                return None
+
+        try:
+            result = subprocess.run(
+                query_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            print(f"A tarefa {task_name} já existe.")
+
+        except subprocess.CalledProcessError as e:
+            if "ERROR: The system cannot find the file specified." in e.stderr.decode():
+                print(f"A tarefa {task_name} não foi encontrada. Criando uma nova tarefa...")
+
+                if not test_mode:
+                    start_time = set_task_daily(start_time)
+                else:
+                    start_time = set_task_every_five_minutes()
+
+                if start_time:
+                    print(f"Tarefa {task_name} criada com sucesso para iniciar em {start_time}. Beba água!")
+            else:
+                print(f"Erro ao verificar a tarefa: {e.stderr.decode()}")
+
+    if os.path.exists('app.bat'):
+        print('O arquivo .bat já existe.')
+    else:
+        create_bat_file()
+
+    check_task_schedule_windows(test_mode=test_mode)
+
+
+def collect_user_data():
+    """
+    Collects data from the user and saves it to a .env file.
+
+    This function prompts the user for their email address, password, recipient email address, and subject for an email message.
+    The data is then written to a .env file, which can be used by other pieces of code to access this information.
+
+    Returns:
+        None
+    """
+    user_email = input("Digite seu email: ")
+    user_pass = getpass.getpass("Digite sua senha: ")
+    recipient = input("Digite o email do destinatário: ")
+    subject = input("Digite o assunto: ")
+
+    with open('.env', 'w') as f:
+        f.write(f"USER_EMAIL={user_email}\n")
+        f.write(f"USER_PASS={user_pass}\n")
+        f.write(f"RECIPIENT={recipient}\n")
+        f.write(f"SUBJECT={subject}\n")
+
+
 if __name__ == '__main__':
+
+    if not os.path.exists('.env'):
+        collect_user_data()
+
+    driver = webdriver.Chrome()
+
     url = 'https://www.msn.com/pt-br/clima/forecast/'
+    # NOTE: O site escolhido para a coleta de dados foi o mesmo oferecido no
+    #       widgets do próprio Windows (WIN+W).
+
     weather_forecast = collect_weather_forecast(url)
     message = generate_forecast(weather_forecast)
 
-    recipient = '@gmail.com'
-    subject = ''
-    send_email(recipient, subject, message)
+    USER_EMAIL = config('USER_EMAIL')
+    USER_PASS = config('USER_PASS')
+    RECIPIENT = config('RECIPIENT')
+    SUBJECT = config('SUBJECT')
 
-# VERIFICAR SE JA TEM AGENDAMENTO DO SCRIPT, SE NÃO, USAR O SISTEMA OP. PARA
-# AGENDAR, SEJA WINDOWS OU LINUX, OU USANDO BIBLIOTECA PYTHON (QUE EU ACHO
-# MENOS PROFISSIONAL)
-# 5. Automatização do Envio Diário:
-# - Agendar a execução do script para rodar diariamente em um horário
-#   específico.
+    send_email(sender=USER_EMAIL, password=USER_PASS,
+               recipient=RECIPIENT, subject=SUBJECT, body=message)
+
+    schedule_script(test_mode=True)
+    # NOTE: O argumento `test_mode=True` serve para a execução do script a cada
+    #       5 minutos a partir do horário de execução. Caso não deseje executar
+    #       o modo teste, o script irá agendar a execução para o próximo dia,
+    #       às 8:00h como padrão, ou pode ser configurado com o parâmetro:
+    #       `start_time='10:00'` como exemplo.
+    #       Use o script `task-delete.py` para deletar o agendamento feito!

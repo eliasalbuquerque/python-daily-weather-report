@@ -16,15 +16,15 @@ previsão para o seu endereço de e-mail.
    - [x] Criar a mensagem para o envio do e-mail;
    - [x] Adicionar os dados do dicionário no corpo da mensagem;
    - [x] Documentar o trecho do código.
-   - [ ] **Revisar:** Organizar a string
+   - [x] **Revisar:** Organizar a string
 3. Envio de E-mail:
    - [x] Pesquisar bibliotecas de envio de e-mail com Python;
    - [x] Enviar e-mail com a mensagem como corpo do e-mail;
    - [x] Documentar o trecho do código.
 4. Automatização do Envio Diário
-   - [ ] Automatizar utilizando biblioteca Python;
-   - [ ] Automatizar utilizando configurações do sistema operacional;
-   - [ ] Documentar o trecho do código.
+   - [x] Automatizar utilizando biblioteca Python;
+   - [x] Automatizar utilizando configurações do sistema operacional;
+   - [x] Documentar o trecho do código.
 5. Update o README.md:
    - [ ] Funcionalidades;
    - [ ] Como usar:

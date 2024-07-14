@@ -5,8 +5,9 @@
 
 # Directories and stuff
 log/
-./*.png
 docs/
+*.png
+*.bat
 
 # Google API files
 credentials.json
