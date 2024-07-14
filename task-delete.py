@@ -1,6 +1,20 @@
 import subprocess
 
 def delete_task(task_name="ExecuteWeatherAppTask"):
+    """
+    Deletes a scheduled task on Windows using the 'schtasks' command.
+
+    Args:
+        task_name (str, optional): The name of the task to delete. Defaults to 
+        "ExecuteWeatherAppTask".
+
+    Returns:
+        None
+
+    Raises:
+        subprocess.CalledProcessError: If an error occurs while executing the 
+        'schtasks' command.
+    """
     delete_command = f"schtasks /Delete /TN {task_name} /F"
 
     try:
@@ -9,5 +23,5 @@ def delete_task(task_name="ExecuteWeatherAppTask"):
     except subprocess.CalledProcessError as e:
         print(f"Erro ao excluir a tarefa: {e.stderr.decode()}")
 
-# Teste da função delete_task
-delete_task()
+if __name__ == '__main__':
+    delete_task()
